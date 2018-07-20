@@ -10,10 +10,30 @@
             <!-- demo -->
             <div class="jtk-demo-canvas canvas-wide statemachine-demo jtk-surface jtk-surface-nopan" id="canvas" @drop="drop($event)" @dragover="allowDrop($event)">
                 <div v-for="item of data" :key="item.id" class="w" :id="item.id">{{item.title}}
-                    <div class="ep"></div>
-                    <div class="del" delete-all><Icon type="ios-close" size="20"></Icon></div>
-                    <div class="node-collapse"><Icon type="ios-cog" size="20"></Icon></div>
+                    <div class="ep">line</div>
+                    <div class="del" delete-all></div>
+                    <div class="node-collapse"></div>
                 </div>
+                <!-- <div class="w" id="phone1" group="two">PHONE INTERVIEW 1
+                    <div class="ep" action="phone1">line</div>
+                    <div class="del" delete-all></div>
+                    <div class="node-collapse"></div>
+                </div>
+                <div class="w" id="phone2" group="three">PHONE INTERVIEW 2
+                    <div class="ep" action="phone2">line</div>
+                    <div class="del" delete-all></div>
+                    <div class="node-collapse"></div>
+                </div>
+                <div class="w" id="inperson" group="four">IN PERSON
+                    <div class="ep" action="inperson">line</div>
+                    <div class="del" delete-all></div>
+                    <div class="node-collapse"></div>
+                </div>
+                <div class="w" id="rejected" group="five">REJECTED
+                    <div class="ep" action="rejected">line</div>
+                    <div class="del" delete-all></div>
+                    <div class="node-collapse"></div>
+                </div> -->
             </div>
             <!-- /demo -->
             <!-- explanation -->
@@ -47,14 +67,11 @@ export default {
   name: 'HelloWorld',
   data () {
     return {
-      instance: null,
 			list:[
 				{id:'drag1', content:'元素1'},
 				{id:'drag2', content:'元素2'},
 				{id:'drag3', content:'元素3'},
-				{id:'drag4', content:'元素4'},
-				{id:'drag5', content:'元素5'},
-				{id:'drag6', content:'元素6'}
+				{id:'drag4', content:'元素4'}
 			],
 			editModal: false,
 			testInput: '',
@@ -65,20 +82,19 @@ export default {
 				// {id:'inperson', group:'four', title:'表4'},
 				// {id:'rejected', group:'five', title:'表5'}
 			],
-			connection:[]
     }
   },
   created () {
   },
   mounted(){
 		jsPlumb.ready(() => {
-      this.initInstance();
+      this.createFlow(this.data);
 		});
   },
   methods: {
-    initInstance() {
+		createFlow (flowData) {
 			let _this = this
-      this.instance = jsPlumb.getInstance({
+			const instance = jsPlumb.getInstance({
         Endpoint: ["Dot", {radius: 2}],
         Connector:"StateMachine",
         HoverPaintStyle: {stroke: "#1e8151", strokeWidth: 2 },
@@ -92,100 +108,102 @@ export default {
             [ "Label", { label: "FOO", id: "label", cssClass: "aLabel" }]
         ],
         Container: "canvas"
-      });
+			});
+			instance.registerConnectionType("basic", { anchor:"Continuous", connector:"StateMachine" });
 
-      this.instance.registerConnectionType("basic", { anchor:"Continuous", connector:"StateMachine" });
-      this.instance.bind("click", function (c) {
-				_this.instance.deleteConnection(c);
-				// _this.instance.deleteEveryEndpoint()
-				// console.log(_this.data)
-				// console.log(_this.connection)
-				// let node = ''
-				// _this.data.map(d => {
-				// 	node = document.getElementById(d.id)
-				// 	_this.initNode(node)
-				// })
-				// _this.connection.map(c => {
-				// 	jsPlumb.connect(c)
-				// })
-			});
-			this.instance.bind("connection", function (info) {
-				_this.connection.push({
-					sourceId:info.sourceId,
-					targetId:info.targetId
-				})
-				info.connection.getOverlay("label").setLabel(info.connection.id);
-			});
-			
-			this.instance.on(canvas, "click", ".del", function(c) {
-				let id = c.path[2].id
-				_this.$Modal.confirm({
-          title: '删除确认',
-          content: '<p>确定删除吗？</p>',
-          onOk: () => {
-						_this.deleteElem(id)
-					}
-        })
-			});
-			// collapse/expand group button
-			this.instance.on(canvas, "click", ".node-collapse", function() {
-				_this.editModal = true
-				// var g = this.parentNode.getAttribute("group"), collapsed = j.hasClass(this.parentNode, "collapsed");
-				// j[collapsed ? "removeClass" : "addClass"](this.parentNode, "collapsed");
-				// j[collapsed ? "expandGroup" : "collapseGroup"](g);
-				
-			});
+    	window.jsp = instance;
 
-		},
-		deleteElem (id) {
-			this.data = this.data.filter(d => d.id !== id)
-			let _this = this
-			let node = ''
-			this.data.map(d => {
-				node = document.getElementById(d.id)
-				this.initNode(node)
-				this.instance.deleteConnectionsForElement(id)
-			})
-			this.$Message.success('删除成功')
-		},
-    newNode(x, y) {
-      var d = document.createElement("div");
+    	let canvas = document.getElementById("canvas");
+			let windows = jsPlumb.getSelector(".statemachine-demo .w");
+
+			instance.bind("click", function (c) {
+				console.log(c)
+        instance.deleteConnection(c);
+			});
+			instance.bind("connection", function (info) {
+        info.connection.getOverlay("label").setLabel(info.connection.id);
+    	});
+
+   		 // bind a double click listener to "canvas"; add new node when this occurs.
+			// jsPlumb.on(canvas, "dblclick", function(e) {
+			// 		newNode(e.offsetX, e.offsetY);
+			// });
+
+			var initNode = function(el) {
+
+        // initialise draggable elements.
+        instance.draggable(el);
+
+        instance.makeSource(el, {
+            filter: ".ep",
+            anchor: "Continuous",
+            connectorStyle: { stroke: "#5c96bc", strokeWidth: 2, outlineStroke: "transparent", outlineWidth: 4 },
+            connectionType:"basic",
+            extract:{
+                "action":"the-action"
+            },
+            // maxConnections: 2,
+            onMaxConnections: function (info, e) {
+                alert("Maximum connections (" + info.maxConnections + ") reached");
+            }
+        });
+
+        instance.makeTarget(el, {
+            dropOptions: { hoverClass: "dragHover" },
+            anchor: "Continuous",
+            allowLoopback: true
+        });
+
+        // this is not part of the core demo functionality; it is a means for the Toolkit edition's wrapped
+        // version of this demo to find out about new nodes being added.
+        //
+        instance.fire("jsPlumbDemoNodeAdded", el);
+			};
+			var newNode = function(x, y) {
+
+				var d = document.createElement("div");
         var id = jsPlumbUtil.uuid();
         d.className = "w";
         d.id = id;
         d.innerHTML = id.substring(0, 7) + "<div class=\"ep\"></div><div class=\"del\"></div><div class=\"node-collapse\"></div>";
         d.style.left = x + "px";
         d.style.top = y + "px";
-        this.instance.getContainer().appendChild(d);
-        this.initNode(d);
-    },
-    initNode(el) {
-      this.instance.draggable(el);
-      this.instance.makeSource(el, {
-          filter: ".ep",
-          anchor: "Continuous",
-          connectorStyle: { stroke: "#5c96bc", strokeWidth: 2, outlineStroke: "transparent", outlineWidth: 4 },
-          connectionType:"basic",
-          extract:{
-              "action":"the-action"
-          },
-          // maxConnections: 2,
-          onMaxConnections: function (info, e) {
-              alert("Maximum connections (" + info.maxConnections + ") reached");
-          }
-      });
+        instance.getContainer().appendChild(d);
+        initNode(d);
+        return d;
+			};
 
-      this.instance.makeTarget(el, {
-          dropOptions: { hoverClass: "dragHover" },
-          anchor: "Continuous",
-          allowLoopback: true
-      });
+			instance.batch(function () {
+        for (var i = 0; i < windows.length; i++) {
+            initNode(windows[i]);
+        }
+			});
 
-      // this is not part of the core demo functionality; it is a means for the Toolkit edition's wrapped
-      // version of this demo to find out about new nodes being added.
-      //
-      this.instance.fire("jsPlumbDemoNodeAdded", el);
-    },
+    	// delete group button
+			instance.on(canvas, "click", ".del", function(c) {
+				instance.remove(c);
+				// _this.$Modal.confirm({
+        //   title: '删除确认',
+        //   content: '<p>确定删除吗？</p>',
+        //   onOk: () => {
+				// 		_this.$Message.success('删除成功')
+				// 	}
+        // })
+				// jsPlumb.remove("element1");
+				// jsPlumb.deleteConnectionsForElement(el, [params])
+			});
+
+			// collapse/expand group button
+			instance.on(canvas, "click", ".node-collapse", function() {
+				_this.editModal = true
+				// var g = this.parentNode.getAttribute("group"), collapsed = j.hasClass(this.parentNode, "collapsed");
+				// j[collapsed ? "removeClass" : "addClass"](this.parentNode, "collapsed");
+				// j[collapsed ? "expandGroup" : "collapseGroup"](g);
+
+			});
+
+			jsPlumb.fire("jsPlumbDemoLoaded", instance);
+		},
 		allowDrop (ev) {
 			ev.preventDefault();
 		},
@@ -194,11 +212,10 @@ export default {
 			ev.dataTransfer.setData("Title",ev.target.innerHTML);
 		},
 		drop (ev) {
-      // this.newNode(Math.random * 100, Math.random * 100)
 			let id = ev.dataTransfer.getData("Text");
 			let data = ev.dataTransfer.getData("Title");
 			let obj = {
-				id: 'test' + id ,
+				id:id,
 				title:data
 			}
 			let arr = Object.assign([],this.data)
@@ -206,23 +223,17 @@ export default {
 			this.data=arr
 			// this.data.push()
 			this.list = this.list.filter(l => l.id !== id)
+
+      this.createFlow(this.data);
       let w = 100
       let l = 100
-      // this.instance.draggable(obj.id)
-      let node = null
-      let that = this
-      let timer = setTimeout(function(){
-      	let node = document.getElementById(obj.id)
-				// console.log(node)
-				node.style.left = w + "px";
-				node.style.left = l + "px";
-				that.initNode(node)
-        clearTimeout(timer)
-			}, 100)
-      // node.style.left = w + "px";
-      // node.style.left = l + "px";
-      console.log(node)
-      // this.initNode(node)
+			this.data.map(d => {
+				document.getElementById(d.id).style.left = w + "px";
+        document.getElementById(d.id).style.top = l + "px";
+        w+= 100
+        l+=100
+			})
+			console.log(this.data)
 			// document.getElementById(id).style.left = ev.offsetX + "px";
 			// document.getElementById(id).style.top = ev.offsetY + "px";
 			// ev.target.appendChild(document.getElementById(data));
@@ -293,16 +304,11 @@ export default {
 
 .ep {
     position: absolute;
-    bottom: 5px;
+    bottom: 37%;
     right: 5px;
-    /* width: 1em;
-    height: 1em; */
-    /* background-color: orange; */
-    background: url(../assets/imgs/line.png) no-repeat center center;
-    width:18px;
-    height:18px;
-    border-radius: 50%;
-    text-align:center;
+    width: 1em;
+    height: 1em;
+    background-color: orange;
     cursor: pointer;
     box-shadow: 0 0 2px black;
     -webkit-transition: -webkit-box-shadow 0.25s ease-in;
@@ -354,7 +360,7 @@ path, .jtk-endpoint { cursor:pointer; }
     position:absolute;
     top:2px;
     right:2px;
-    /* background-color:#ccc; */
+    background-color:#ccc;
     padding:1px;
     cursor:pointer;
     font-size:13px;
@@ -364,26 +370,26 @@ path, .jtk-endpoint { cursor:pointer; }
     text-align:center;
     display:block;
 }
-/* .del:after {
+.del:after {
     content:"X";
-} */
+}
 
 .node-collapse {
     left:2px;
     text-align: center;
 }
 
-/* .node-collapse:after {
+.node-collapse:after {
     content:"-";
-} */
+}
 
-/* .group-container.collapsed .node-collapse:after {
+.group-container.collapsed .node-collapse:after {
     content:"+";
-} */
+}
 
-/* .del[delete-all] {
+.del[delete-all] {
     background-color: pink;
-} */
+}
 #list {
 	list-style: none;
 	padding: 0;

@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "iview": "^2.14.3",
-    "jquery": "^3.3.1",
     "jsplumb": "^2.7.9",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
@@ -40,6 +39,8 @@
     "postcss-import": "^11.0.0",
     "postcss-loader": "^2.0.8",
     "postcss-url": "^7.2.1",
+    "less": "^3.7.1",
+    "less-loader": "^4.1.0",
     "rimraf": "^2.6.0",
     "semver": "^5.3.0",
     "shelljs": "^0.7.6",
